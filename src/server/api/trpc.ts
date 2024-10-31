@@ -9,6 +9,7 @@
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { TRPCError } from '@trpc/server';
 
 import { db } from "~/server/db";
 
@@ -24,10 +25,17 @@ import { db } from "~/server/db";
  *
  * @see https://trpc.io/docs/server/context
  */
+interface AuthContext {
+  user?: {
+    walletAddress: string;
+  };
+}
+
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   return {
     db,
     ...opts,
+    user: undefined,
   };
 };
 
@@ -104,3 +112,22 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+/**
+ * Protected procedure
+ *
+ * This is a protected procedure that requires authentication.
+ */
+const isAuthed = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.user || !('walletAddress' in ctx.user)) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+    },
+  });
+});
+
+export const protectedProcedure = t.procedure.use(isAuthed);

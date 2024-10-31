@@ -19,3 +19,24 @@ model Post {
 
     @@index([name])
 }
+
+model AuthChallenge {
+    id            Int      @id @default(autoincrement())
+    challenge     String   @unique
+    message       String
+    walletAddress String
+    expiresAt     DateTime
+    createdAt     DateTime @default(now())
+
+    @@index([walletAddress])
+    @@index([expiresAt])
+}
+
+model User {
+    id            Int      @id @default(autoincrement())
+    walletAddress String   @unique
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+
+    @@index([walletAddress])
+}

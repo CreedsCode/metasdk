@@ -2,8 +2,16 @@ import Link from "next/link";
 
 import { LatestPost } from "~/app/_components/post";
 import { api, HydrateClient } from "~/trpc/server";
+import { LoginButton } from "./_components/LoginButton";
+import { useSearchParams } from "next/navigation";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const error = searchParams.error;
+
   const hello = await api.post.hello({ text: "from tRPC" });
 
   void api.post.getLatest.prefetch();
@@ -46,6 +54,7 @@ export default async function Home() {
           </div>
 
           <LatestPost />
+          <LoginButton />
         </div>
       </main>
     </HydrateClient>

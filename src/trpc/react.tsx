@@ -38,7 +38,8 @@ export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
-
+  // get authToken from sessionStorage
+  const authToken = sessionStorage.getItem("authToken");
   const [trpcClient] = useState(() =>
     api.createClient({
       links: [
@@ -53,11 +54,12 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           headers: () => {
             const headers = new Headers();
             headers.set("x-trpc-source", "nextjs-react");
+            headers.set("authorization", authToken ?? "");
             return headers;
           },
         }),
       ],
-    })
+    }),
   );
 
   return (
