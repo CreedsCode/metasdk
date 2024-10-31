@@ -5,6 +5,7 @@ import { type Metadata } from "next";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { NearWalletProvider } from "~/providers/NearWalletProvider";
+import { MetaTransactionProvider } from "~/sdk/components/MetaTransactionProvider";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -21,7 +22,9 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
         <NearWalletProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <MetaTransactionProvider>
+            <TRPCReactProvider>{children}</TRPCReactProvider>
+          </MetaTransactionProvider>
         </NearWalletProvider>
       </body>
     </html>

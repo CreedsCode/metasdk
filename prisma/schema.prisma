@@ -38,5 +38,42 @@ model User {
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
 
+    transactions Transaction[]
+    quota        Quota?
+
     @@index([walletAddress])
+}
+
+model Subsidy {
+    id              Int    @id @default(autoincrement())
+    name            String
+    maxAmount       BigInt
+    maxTransactions Int
+    totalBudget     BigInt
+    usedBudget      BigInt
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+    id        Int     @id @default(autoincrement())
+    userId    Int
+    user      User    @relation(fields: [userId], references: [id])
+    amount    BigInt
+    subsidyId Int?
+    status    String
+    txHash    String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Quota {
+    id        Int      @id @default(autoincrement())
+    userId    Int      @unique
+    user      User     @relation(fields: [userId], references: [id])
+    usedCount Int      @default(0)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
