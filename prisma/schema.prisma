@@ -50,7 +50,7 @@ model Subsidy {
     maxAmount       BigInt
     maxTransactions Int
     totalBudget     BigInt
-    usedBudget      BigInt
+    usedBudget      BigInt @default(0)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

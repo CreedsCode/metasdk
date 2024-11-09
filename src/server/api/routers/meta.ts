@@ -21,7 +21,7 @@ export const metaRouter = createTRPCRouter({
         subsidyId: z.number(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { subsidyRuleId, walletAddress, subsidyId } = input;
 
       const user = await ctx.db.user.findUnique({
@@ -44,9 +44,23 @@ export const metaRouter = createTRPCRouter({
         };
       }
 
-      const subsidy = await ctx.db.subsidy.findUnique({
+      let subsidy = await ctx.db.subsidy.findUnique({
         where: { id: subsidyId },
       });
+
+      // for demo create a default subsidy
+      if (!subsidy) {
+        subsidy = await ctx.db.subsidy.create({
+          data: {
+            id: subsidyId,
+            maxTransactions: 100,
+            totalBudget: 1000000n,
+            name: "Default Subsidy",
+            maxAmount: 1000000n,
+            usedBudget: 0n
+          },
+        });
+      }
 
       if (!subsidy) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Subsidy not found" });
@@ -62,7 +76,7 @@ export const metaRouter = createTRPCRouter({
         eligible: true,
       };
     }),
-  relayTransaction: publicProcedure
+  relay: publicProcedure
     .input(z.object({ subsidyId: z.number(), signedDelegates: z.array(z.instanceof(Buffer)) }))
     .mutation(async ({ ctx, input }) => {
       const { subsidyId, signedDelegates } = input;
@@ -118,9 +132,23 @@ export const metaRouter = createTRPCRouter({
       return { message: "Relayed", data: result };
     }),
   getQuota: publicProcedure
-    .input(z.object({ userId: z.string() }))
+    .input(z.object({ accountId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const { userId } = input;
+      const { accountId } = input;
+      const user = await ctx.db.user.findUnique({
+        where: { walletAddress: accountId },
+      });
+      console.log("getting user for getQuota", user);
+      let quota = await ctx.db.quota.findUnique({
+        where: { userId: user?.id },
+      });
+      console.log("getting quota for getQuota", quota);
+      if (!quota) {
+        quota = await ctx.db.quota.create({
+          data: { userId: user?.id ?? 0, usedCount: 0 },
+        });
+      }
+      return quota;
     }),
   getSubsidy: publicProcedure
     .input(z.object({ subsidyId: z.number() }))

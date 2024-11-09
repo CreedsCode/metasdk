@@ -18,7 +18,7 @@ export default function AppPage() {
 
     try {
       const result = await sendTransaction(
-        "your-contract.testnet", // Replace with your contract ID
+        "hello.near-examples.testnet", // Replace with your contract ID
         [action],
         {
           subsidyRuleId: "1",

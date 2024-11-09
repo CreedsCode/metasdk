@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { type Action, actionCreators, encodeSignedDelegate } from '@near-js/transactions';
+import { type Action, actionCreators, encodeSignedDelegate, buildDelegateAction } from '@near-js/transactions';
 import { api } from '~/trpc/react';
 import { useWalletSelector } from '~/providers/NearWalletProvider';
+import { providers } from 'near-api-js';
 
 export function useMetaTransaction() {
   const { selector, modal, accountId } = useWalletSelector();
@@ -9,14 +10,10 @@ export function useMetaTransaction() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const checkEligibility = api.meta.checkEligibility.useQuery({
-    subsidyRuleId: "1",
-    subsidyId: 1,
-    walletAddress: accountId,
-  });
+  const checkEligibility = api.meta.checkEligibility.useMutation();
   const relay = api.meta.relay.useMutation();
   const getQuota = api.meta.getQuota.useQuery({
-    userId: "52",
+    accountId: accountId ?? "",
   });
 
   const sendTransaction = async (
@@ -28,31 +25,77 @@ export function useMetaTransaction() {
     }
   ) => {
     try {
+      if (!receiverId) {
+        console.log("no receiver bitch")
+      }
+
       setIsLoading(true);
       setError(null);
 
-      // Check eligibility first
+      // Check eligibility with correct parameters
       const eligibility = await checkEligibility.mutateAsync({
-        subsidyRuleId: options?.subsidyRuleId,
+        subsidyRuleId: options?.subsidyRuleId ?? "1",
+        subsidyId: 1,
+        walletAddress: accountId ?? "",
       });
 
-      if (!eligibility.isEligible) {
-        throw new Error(eligibility.reason || 'Not eligible for subsidy');
+      if (!eligibility.eligible) {
+        throw new Error('Not eligible for subsidy');
       }
 
       // Create signed delegate
-      const wallet = await selector?.wallet("my-near-wallet");
-      const accounts = await wallet?.getAccounts();
-      const signedDelegate = await accounts?.[0].signedDelegate({
-        actions,
+      const wallet = await selector?.wallet();
+      if (!wallet) {
+        throw new Error('No wallet selected');
+      }
+
+      const accounts = await wallet.getAccounts();
+      if (!accounts?.length) {
+        throw new Error('No accounts found');
+      }
+
+      // Build the delegate action
+      const currentNonce = BigInt(Date.now());
+
+      // Create RPC provider
+      // console.log("selector", selector?.options.network);
+      // const provider = new providers.JsonRpcProvider(selector.options.network.nodeUrl);
+      // const block = await provider.block({ finality: 'final' });
+      // const maxBlockHeight = BigInt(block.header.height + 120); // TTL of 120 blocks
+
+      // const delegateAction = buildDelegateAction({
+      //   actions,
+      //   maxBlockHeight,
+      //   nonce: currentNonce,
+      //   publicKey: accounts[0].publicKey,
+      //   receiverId,
+      //   senderId: accounts[0].accountId,
+      // });
+
+
+      const wallie = await selector?.wallet();
+      const accountsa = await wallie?.getAccounts();
+      console.log(receiverId, "receiverId", "senderId", accounts[0].accountId)
+      // Sign the delegate action
+      const signedDelegate = await accountsa[0].({
+        actions: actions,
         blockHeightTtl: 120,
-        receiverId,
+        receiverId: receiverId,
       });
+
+
+      // const signedDelegate = await wallet.signMessage({
+      //   message: delegateAction.encode(),
+      //   receiver: receiverId,
+      //   sender: accounts[0].accountId ?? "",
+      //   callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/relay`,
+
+      // });
 
       // Relay transaction
       const result = await relay.mutateAsync({
-        signedDelegate: Array.from(encodeSignedDelegate(signedDelegate)),
-        subsidyRuleId: options?.subsidyRuleId,
+        signedDelegates: [encodeSignedDelegate(signedDelegate)],
+        subsidyId: Number(options?.subsidyRuleId ?? "1"),
       });
 
       return result;
